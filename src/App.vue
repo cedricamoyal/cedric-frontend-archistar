@@ -1,9 +1,15 @@
 <template>
   <b-container fluid>
     <b-row>
-
       <!-- Filters Column -->
       <b-col cols="12" md="4" class="p-4">
+        <!-- Intro -->
+        <h6 class="mt-3 mb-4"> 
+          Cedric Amoyal <br> 
+          Coding challenge for Sr Software Engineer
+        </h6>
+        <hr class="mt-4 mb-4">
+
         <!-- Dynamic search input - Bootstrap Vue -->
         <b-form-input v-model="Title" placeholder="Enter the Title" class="mt-3 mb-3"></b-form-input>
 
@@ -51,7 +57,7 @@
       </b-col>
 
       <!-- Map column -->
-      <b-col cols="12" md="8">
+      <b-col cols="12" md="8" class="p-4">
 
         <!-- Map -->
         <MglMap 
@@ -145,7 +151,7 @@ export default {
             // If you miss one of the conditions you are out (return false)
 
             // filter on Category - Autocomplete
-            (v.Category && item.properties.project.Category.toLowerCase() !== v.Category) ||
+            (v.Category && item.properties.project.Category.toLowerCase() !== v.Category.toLowerCase()) ||
 
             // filter on Stage - Dropdown select
             (v.Stage && item.properties.project.Stage.toLowerCase() !== v.Stage) ||
@@ -188,10 +194,12 @@ export default {
       let result = []
       if(this.jsonData){
         this.jsonData.forEach(function(item) {
-          var index = result.findIndex(x => x === item.properties.project.Category.toLowerCase())
+          // Capitalize Category name
+          let capitalizeName = item.properties.project.Category.charAt(0).toUpperCase() + item.properties.project.Category.slice(1).toLowerCase()
+          let index = result.findIndex(x => x === capitalizeName)
           if (index === -1){
             result.push(
-              item.properties.project.Category.toLowerCase()
+              capitalizeName
             )
           }
         })
@@ -248,7 +256,7 @@ export default {
 
 <style>
 .mglMap {
-  min-height: 500px;
+  min-height: 550px;
 }
 .alignleft {
 	float: left;
