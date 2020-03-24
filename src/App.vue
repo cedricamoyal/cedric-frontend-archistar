@@ -4,17 +4,17 @@
       <!-- Filters Column -->
       <b-col cols="12" md="4" class="p-4">
         <!-- Intro -->
-        <h6 class="mt-3 mb-4"> 
-          Cedric Amoyal <br> 
-          Coding challenge for Sr Software Engineer
-        </h6>
+        <div class="mt-3 mb-4"> 
+          <h6>Cedric Amoyal - Vuex</h6> 
+          <p>Coding challenge for Sr Software Engineer</p>
+        </div>
         <hr class="mt-4 mb-4">
 
         <!-- Dynamic search input - Bootstrap Vue -->
-        <b-form-input v-model="Title" placeholder="Enter the Title" class="mt-3 mb-3"></b-form-input>
+        <b-form-input :value="filters.Title" @input="updateTitle" placeholder="Enter the Title" class="mt-3 mb-3"></b-form-input>
 
         <!-- Dropdown select - Bootstrap Vue -->
-        <b-form-select v-model="Stage" :options="stageList" class="mt-3 mb-3"></b-form-select>
+        <b-form-select :value="filters.Stage" @change="updateStage" :options="stageList" class="mt-3 mb-3"></b-form-select>
 
         <!-- Autocomplete - Ant Design -->
         <a-auto-complete
@@ -28,8 +28,8 @@
         <!-- Range Slider - Ant Design -->
         <p class="mt-3">
           Value 
-          <span v-if="Value"> 
-            - [ ${{ Value[0]/1000 }}K, ${{ Value[1]/1000 }}K ] 
+          <span v-if="filters.Value"> 
+            - [ ${{ filters.Value[0]/1000 }}K, ${{ filters.Value[1]/1000 }}K ] 
             </span>
         </p>
         <a-slider
@@ -62,10 +62,10 @@
         <!-- Map -->
         <MglMap 
           v-if="jsonData"
-          :accessToken="accessToken" 
-          :mapStyle="mapStyle" 
-          :zoom="zoom"
-          :center="coordinates"
+          :accessToken="mapboxData.accessToken" 
+          :mapStyle="mapboxData.mapStyle" 
+          :zoom="mapboxData.zoom"
+          :center="mapboxData.coordinates"
           class="mglMap">
             <!-- Control Items -->
             <!-- TODO:: Fix issues with Icons  -->
@@ -96,12 +96,13 @@
 </template>
 
 <script>
+// Import data from the store
+import { mapState } from 'vuex'
+import { mapGetters } from 'vuex'
+
 // Import Mapbox
 import Mapbox from "mapbox-gl";
 import { MglMap, MglNavigationControl, MglGeolocateControl, MglMarker, MglPopup } from "vue-mapbox";
-
-// Import Data from testBlob.json
-import testBlob from '@/testBlob.json'
 
 export default {
   name: 'App',
@@ -117,120 +118,36 @@ export default {
 
   data() {
     return {
-      // Mapbox access token (Should not be here)
-      accessToken: "pk.eyJ1IjoiY2VkcmljYW1veWFsIiwiYSI6ImNrODU2azBqYjAzczgzb3BnN3p0dmk2OGkifQ.oQ8RdH32RpG5p-Qwip2qVQ",
-
-      // Mapbox initial setting
-      mapStyle: "mapbox://styles/mapbox/streets-v11",
-      coordinates: [151.209900, -33.865143],
-      zoom: 12,
-
-      // Use of data from testBlob.json
-      jsonData: testBlob.features,
-
-      // Data used for the filters: Title, Stage, Category, Value and Ownership
-      Title: "",
-      Stage: null,
-      Category: null,
-      Value: "",
-      ShowOnlyPrivateOwnership: false,
+      
     };
   },
 
   computed: {
-    // This computed is used to create the binding between filter interactions and map display. 
-    // The result (filteredData) is displayed on the map
-    filteredData () {
-      let result = ""
-      let v = this
-      if(this.jsonData){
-        // We start from "jsonData: testBlob.features"
-        result =  this.jsonData.filter(function(item) {
-          if (
-            // We use negative statement in order to be able to filter on multiple conditions.
-            // If you miss one of the conditions you are out (return false)
-
-            // filter on Category - Autocomplete
-            (v.Category && item.properties.project.Category.toLowerCase() !== v.Category.toLowerCase()) ||
-
-            // filter on Stage - Dropdown select
-            (v.Stage && item.properties.project.Stage.toLowerCase() !== v.Stage) ||
-
-            // filter on Title - Dynamic search input
-            !item.properties.project.Title.toLowerCase().includes(v.Title.toLowerCase()) ||
-
-            // filter on Value - Range Slider
-            Number(item.properties.project.Value) < v.Value[0] || 
-            Number(item.properties.project.Value) > v.Value[1] ||
-
-            // filter on Show Only Private Ownership - Switch
-            (v.ShowOnlyPrivateOwnership ? item.properties.project.Ownership.toLowerCase() !== "private" : "")
-          ){
-            return false
-          } else {
-            return true
-          }
-        })
-      }
-      return result
-    },
-    // Create list of Stage option for Dropdown select
-    stageList () {
-      let result = [{ value: null, text: 'Please select a stage' }]
-      if(this.jsonData){
-        this.jsonData.forEach(function(item) {
-          var index = result.findIndex(x => x.value === item.properties.project.Stage.toLowerCase())
-          if (index === -1){
-            result.push(
-              { value: item.properties.project.Stage.toLowerCase(), text: item.properties.project.Stage }
-            )
-          }
-        })
-      }
-      return result
-    },
-    // Create list of Category option for Autocomplete
-    categoryList () {
-      let result = []
-      if(this.jsonData){
-        this.jsonData.forEach(function(item) {
-          // Capitalize Category name
-          let capitalizeName = item.properties.project.Category.charAt(0).toUpperCase() + item.properties.project.Category.slice(1).toLowerCase()
-          let index = result.findIndex(x => x === capitalizeName)
-          if (index === -1){
-            result.push(
-              capitalizeName
-            )
-          }
-        })
-      }
-      return result
-    },
-    // Find min and max Value for the Range Slider settings
-    valueRange () {
-      let array = []
-      let result = []
-      if(this.jsonData){
-        this.jsonData.forEach(function(item) {
-          array.push(Number(item.properties.project.Value))
-        })
-        // Sort numbers in array
-        array.sort((a, b) => a - b)
-      }
-      
-      // If the smallest value is less than 1000 make it 0
-      if (array[0] < 1000){
-        array[0] = 0
-      }
-
-      result = [array[0], array[array.length - 1]]
-      return result
-    }    
+    // Get data from the store
+    ...mapState({ 
+      jsonData: state => state.jsonData,
+      mapboxData: state => state.mapboxData,   
+      filters: state => state.filters,   
+    }),
+    ...mapGetters([
+      'stageList',
+      'categoryList',
+      'valueRange',
+      'filteredData',
+    ]), 
   },
   methods: {
-    // Update the value of this.Value after slider changes
+    // Update the value of Title in the store
+    updateTitle (value) {
+      this.$store.dispatch('updateTitleAction', value)
+    },
+    // Update the value of Stage in the store
+    updateStage (value) {
+      this.$store.dispatch('updateStageAction', value)
+    },
+    // Update the value of Value in the store
     afterChangeSliderValue (value) {
-      this.Value = value
+      this.$store.dispatch('updateValueAction', value)
     },
     // Make the Autocomplete non-case-sensitive - See https://www.antdv.com/components/auto-complete/
     filterOptionAutocompleteCategory (input, option) {
@@ -238,13 +155,13 @@ export default {
         option.componentOptions.children[0].text.toUpperCase().indexOf(input.toUpperCase()) >= 0
       );
     },
-    // Update the value of this.Category after Autocomplete changes
+    // Update the value of Category in the store
     onChangeAutocompleteCategory (value) {
-      this.Category = value
+      this.$store.dispatch('updateCategoryAction', value)
     },
-    // Update the value of this.ShowOnlyPrivateOwnership after switch changes
+    // Update the value of ShowOnlyPrivateOwnership in the store
     onChangeSwitchOwnership (value) {
-      this.ShowOnlyPrivateOwnership = value
+      this.$store.dispatch('updateShowOnlyPrivateOwnershipAction', value)
     }
   },
   created() {
